@@ -11,6 +11,7 @@ import shutil
 from pathlib import Path
 
 import streamlit as st
+import streamlit.components.v1 as components
 
 # =================== CONFIG ===================
 YOUR_NAME    = "GESNER DESLANDES"
@@ -153,6 +154,93 @@ def list_url_apps():
 
 def list_all_apps():
     return list_local_apps() + list_url_apps()
+
+
+# ---------------- HTML-inliner for uploaded apps ----------------
+MIME_MAP = {
+    ".css":   "text/css",
+    ".js":    "application/javascript",
+    ".mjs":   "application/javascript",
+    ".png":   "image/png",
+    ".jpg":   "image/jpeg",
+    ".jpeg":  "image/jpeg",
+    ".gif":   "image/gif",
+    ".webp":  "image/webp",
+    ".svg":   "image/svg+xml",
+    ".ico":   "image/x-icon",
+    ".json":  "application/json",
+    ".woff":  "font/woff",
+    ".woff2": "font/woff2",
+    ".ttf":   "font/ttf",
+    ".otf":   "font/otf",
+    ".mp3":   "audio/mpeg",
+    ".wav":   "audio/wav",
+    ".ogg":   "audio/ogg",
+    ".mp4":   "video/mp4",
+    ".webm":  "video/webm",
+}
+
+
+def _to_data_uri(p: Path) -> str:
+    mime = MIME_MAP.get(p.suffix.lower(), "application/octet-stream")
+    return f"data:{mime};base64,{base64.b64encode(p.read_bytes()).decode()}"
+
+
+def render_html_app(index_path, height=900):
+    """Read an uploaded HTML file, inline local assets, and render it in Streamlit."""
+    index_path = Path(index_path)
+    base_dir = index_path.parent
+
+    html = index_path.read_text(encoding="utf-8", errors="ignore")
+
+    # Inline <link rel="stylesheet" href="...">
+    def repl_css(m):
+        href = m.group(2)
+        if href.startswith(("http://", "https://", "data:", "//")):
+            return m.group(0)
+        p = (base_dir / href).resolve()
+        if p.exists() and p.is_file():
+            css = p.read_text(encoding="utf-8", errors="ignore")
+            return f"<style>{css}</style>"
+        return m.group(0)
+
+    html = re.sub(
+        r'(<link[^>]+href=["\'])([^"\']+\.css)(["\'][^>]*>)',
+        repl_css, html, flags=re.IGNORECASE,
+    )
+
+    # Inline <script src="...">
+    def repl_js(m):
+        src = m.group(2)
+        if src.startswith(("http://", "https://", "data:", "//")):
+            return m.group(0)
+        p = (base_dir / src).resolve()
+        if p.exists() and p.is_file():
+            js = p.read_text(encoding="utf-8", errors="ignore")
+            return f"<script>{js}</script>"
+        return m.group(0)
+
+    html = re.sub(
+        r'(<script[^>]+src=["\'])([^"\']+)(["\'][^>]*>\s*</script>)',
+        repl_js, html, flags=re.IGNORECASE,
+    )
+
+    # Inline <img src="...">
+    def repl_img(m):
+        src = m.group(2)
+        if src.startswith(("http://", "https://", "data:", "//")):
+            return m.group(0)
+        p = (base_dir / src).resolve()
+        if p.exists() and p.is_file():
+            return m.group(1) + _to_data_uri(p) + m.group(3)
+        return m.group(0)
+
+    html = re.sub(
+        r'(<img[^>]+src=["\'])([^"\']+)(["\'])',
+        repl_img, html, flags=re.IGNORECASE,
+    )
+
+    components.html(html, height=height, scrolling=True)
 
 
 # ---------------- Profile picture helpers ----------------
@@ -315,8 +403,10 @@ with tab_upload:
     with col2:
         uploaded = st.file_uploader(
             "Upload HTML + assets",
-            type=["html", "css", "js", "png", "jpg", "jpeg",
-                  "svg", "gif", "webp", "json", "txt", "ico"],
+            type=["html", "htm", "css", "js", "mjs", "png", "jpg", "jpeg",
+                  "svg", "gif", "webp", "json", "txt", "ico",
+                  "woff", "woff2", "ttf", "otf",
+                  "mp3", "wav", "ogg", "mp4", "webm"],
             accept_multiple_files=True,
             key="upload_files",
         )
@@ -329,13 +419,34 @@ with tab_upload:
         if not uploaded:
             st.warning("Pick at least one file first.")
         else:
-            folder = safe_name(app_name.strip() or Path(uploaded[0].name).stem)
+            # Choose a folder name: user input, else first HTML file's stem, else first file's stem
+            first_html = next(
+                (f for f in uploaded if Path(f.name).suffix.lower() in (".html", ".htm")),
+                None,
+            )
+            base_for_name = app_name.strip() or (
+                Path(first_html.name).stem if first_html else Path(uploaded[0].name).stem
+            )
+            folder = safe_name(base_for_name)
             target = APPS_DIR / folder
             target.mkdir(parents=True, exist_ok=True)
+
+            html_saved = False
             for f in uploaded:
                 name = Path(f.name).name
-                if name:
-                    (target / name).write_bytes(f.read())
+                if not name:
+                    continue
+                # Any HTML file becomes index.html so it displays automatically
+                if name.lower().endswith((".html", ".htm")):
+                    name = "index.html"
+                    html_saved = True
+                (target / name).write_bytes(f.read())
+
+            if not html_saved:
+                st.warning(
+                    "No HTML file in this upload — only the HTML page will display "
+                    "when opened. Add an .html file to make the app clickable."
+                )
             st.success(f"Added **{folder}** — refresh to see it below.")
             st.rerun()
 
@@ -403,9 +514,9 @@ if st.session_state.active_app:
 
         try:
             if selected["kind"] == "url":
-                st.iframe(selected["url"], height=900)
+                components.iframe(selected["url"], height=900, scrolling=True)
             else:
-                st.iframe(selected["path"], height=900)
+                render_html_app(selected["path"], height=900)
         except Exception as e:
             st.error(f"Could not load app: {e}")
             if selected["kind"] == "url":
