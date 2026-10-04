@@ -4,6 +4,7 @@ Built by: Gesner Deslandes — Software Engineer
 Contact: (509)-47385663 · deslandes78@gmail.com
 """
 
+import base64
 import json
 import re
 import shutil
@@ -19,9 +20,11 @@ YOUR_EMAIL   = "deslandes78@gmail.com"
 APP_NAME     = "NEST — MY HTML HUB"
 APPS_DIR     = Path("apps")
 URLS_FILE    = Path("url_apps.json")
+PROFILE_DIR  = Path("profile")
 # ==============================================
 
 APPS_DIR.mkdir(exist_ok=True)
+PROFILE_DIR.mkdir(exist_ok=True)
 
 st.set_page_config(
     page_title=f"{APP_NAME} · {YOUR_NAME}",
@@ -37,9 +40,8 @@ st.markdown(
       .stApp {
         background: linear-gradient(180deg, #e0f2fe 0%, #f0f9ff 100%);
       }
-      section[data-testid="stSidebar"] {
-        background-color: #bae6fd;
-      }
+      section[data-testid="stSidebar"] { background-color: #bae6fd; }
+
       .stButton > button {
         background-color: #0284c7 !important;
         color: #ffffff !important;
@@ -48,9 +50,8 @@ st.markdown(
         font-weight: 600 !important;
         transition: background 0.15s ease !important;
       }
-      .stButton > button:hover {
-        background-color: #0369a1 !important;
-      }
+      .stButton > button:hover { background-color: #0369a1 !important; }
+
       div[data-testid="stVerticalBlockBorderWrapper"] {
         background-color: #f0f9ff;
         border: 1px solid #7dd3fc !important;
@@ -154,44 +155,152 @@ def list_all_apps():
     return list_local_apps() + list_url_apps()
 
 
+# ---------------- Profile picture helpers ----------------
+PROFILE_EXTS = (".png", ".jpg", ".jpeg", ".webp", ".gif")
+
+
+def get_profile_path():
+    """Return the path to the current profile picture, or None."""
+    for f in sorted(PROFILE_DIR.iterdir()):
+        if f.suffix.lower() in PROFILE_EXTS and f.is_file():
+            return f
+    return None
+
+
+def get_profile_base64():
+    """Return (base64_string, mime) or (None, None)."""
+    p = get_profile_path()
+    if not p:
+        return None, None
+    mime = {
+        ".png": "image/png", ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg", ".webp": "image/webp", ".gif": "image/gif",
+    }.get(p.suffix.lower(), "image/png")
+    return base64.b64encode(p.read_bytes()).decode(), mime
+
+
+def save_profile(uploaded_file):
+    """Save the uploaded image, replacing any previous one."""
+    for f in PROFILE_DIR.iterdir():
+        if f.is_file() and f.suffix.lower() in PROFILE_EXTS:
+            f.unlink()
+    ext = Path(uploaded_file.name).suffix.lower()
+    if ext not in PROFILE_EXTS:
+        ext = ".png"
+    (PROFILE_DIR / f"avatar{ext}").write_bytes(uploaded_file.read())
+
+
+def delete_profile():
+    for f in PROFILE_DIR.iterdir():
+        if f.is_file() and f.suffix.lower() in PROFILE_EXTS:
+            f.unlink()
+
+
 # ---------------- Session state ----------------
 if "active_app" not in st.session_state:
     st.session_state.active_app = None
+if "show_profile_uploader" not in st.session_state:
+    st.session_state.show_profile_uploader = False
 
 
-# ---------------- Header ----------------
+# ---------------- Header with profile picture ----------------
+avatar_b64, avatar_mime = get_profile_base64()
+
+if avatar_b64:
+    avatar_html = f"""
+        <img src="data:{avatar_mime};base64,{avatar_b64}"
+             alt="{YOUR_NAME}"
+             style="
+                width:130px; height:130px; object-fit:cover;
+                border-radius:50%;
+                border:4px solid #0284c7;
+                box-shadow:0 6px 18px rgba(2,132,199,.25);
+                display:block;
+             ">
+    """
+else:
+    initials = "".join([w[0] for w in YOUR_NAME.split()[:2]]).upper()
+    avatar_html = f"""
+        <div style="
+            width:130px; height:130px; border-radius:50%;
+            border:4px solid #0284c7;
+            background:#bae6fd; color:#075985;
+            display:flex; align-items:center; justify-content:center;
+            font-size:2.4rem; font-weight:800;
+            box-shadow:0 6px 18px rgba(2,132,199,.25);
+        ">{initials}</div>
+    """
+
+# --- Header block ---
 st.markdown(
     f"""
     <div style="
-        text-align:center; padding: 32px 24px 22px;
+        display:flex; align-items:center; gap:26px;
+        padding: 28px 30px;
         background: linear-gradient(135deg, #bae6fd 0%, #e0f2fe 100%);
         border: 1px solid #7dd3fc;
         border-radius: 18px;
         box-shadow: 0 8px 24px rgba(2, 132, 199, 0.12);
         margin-bottom: 8px;
     ">
-        <h1 style="
-            margin:0; font-size:2.9rem; font-weight:800; letter-spacing:-0.02em;
-            background: linear-gradient(90deg,#0369a1,#0284c7);
-            -webkit-background-clip: text; background-clip: text;
-            color: transparent;
-        ">{YOUR_NAME}</h1>
-        <p style="
-            margin:8px 0 0; font-size:1rem; font-weight:600;
-            letter-spacing:0.14em; color:#075985; text-transform:uppercase;
-        ">{YOUR_TITLE}</p>
-        <p style="margin:10px 0 0; font-size:0.95rem; color:#0c4a6e;">
-            📞 {YOUR_PHONE} &nbsp;·&nbsp; ✉️
-            <a href="mailto:{YOUR_EMAIL}" style="color:#0284c7; text-decoration:none;">{YOUR_EMAIL}</a>
-        </p>
-        <p style="
-            margin:18px 0 0; font-size:1.15rem; font-weight:700;
-            letter-spacing:0.08em; color:#0c4a6e;
-        ">{APP_NAME}</p>
+        <div>{avatar_html}</div>
+        <div style="flex:1; min-width:0;">
+            <h1 style="
+                margin:0; font-size:2.7rem; font-weight:800;
+                letter-spacing:-0.02em;
+                background: linear-gradient(90deg,#0369a1,#0284c7);
+                -webkit-background-clip: text; background-clip: text;
+                color: transparent;
+            ">{YOUR_NAME}</h1>
+            <p style="
+                margin:6px 0 0; font-size:0.98rem; font-weight:600;
+                letter-spacing:0.14em; color:#075985; text-transform:uppercase;
+            ">{YOUR_TITLE}</p>
+            <p style="margin:8px 0 0; font-size:0.92rem; color:#0c4a6e;">
+                📞 {YOUR_PHONE} &nbsp;·&nbsp; ✉️
+                <a href="mailto:{YOUR_EMAIL}" style="color:#0284c7; text-decoration:none;">{YOUR_EMAIL}</a>
+            </p>
+            <p style="
+                margin:14px 0 0; font-size:1.08rem; font-weight:700;
+                letter-spacing:0.08em; color:#0c4a6e;
+            ">{APP_NAME}</p>
+        </div>
     </div>
     """,
     unsafe_allow_html=True,
 )
+
+# --- Small button to open/close the profile uploader ---
+btn_col, _ = st.columns([1, 5])
+with btn_col:
+    label = "🖼 Change photo" if avatar_b64 else "🖼 Upload profile photo"
+    if st.button(label, use_container_width=True, key="toggle_avatar"):
+        st.session_state.show_profile_uploader = not st.session_state.show_profile_uploader
+        st.rerun()
+
+if st.session_state.show_profile_uploader:
+    with st.container(border=True):
+        st.markdown("##### Profile picture")
+        new_pic = st.file_uploader(
+            "Upload a square image (PNG/JPG, under 2 MB is best)",
+            type=["png", "jpg", "jpeg", "webp", "gif"],
+            key="avatar_upload",
+        )
+        c1, c2, c3 = st.columns([1, 1, 4])
+        with c1:
+            if st.button("Save", use_container_width=True, key="avatar_save"):
+                if not new_pic:
+                    st.warning("Choose a file first.")
+                else:
+                    save_profile(new_pic)
+                    st.session_state.show_profile_uploader = False
+                    st.success("Profile picture updated.")
+                    st.rerun()
+        with c2:
+            if avatar_b64 and st.button("Remove", use_container_width=True, key="avatar_remove"):
+                delete_profile()
+                st.session_state.show_profile_uploader = False
+                st.rerun()
 
 st.divider()
 
@@ -199,7 +308,6 @@ st.divider()
 # ---------------- Add panels ----------------
 tab_upload, tab_url = st.tabs(["➕  Upload HTML app", "🔗  Add URL app (demo)"])
 
-# --- Tab 1: upload HTML ---
 with tab_upload:
     col1, col2, col3 = st.columns([2, 3, 1])
     with col1:
@@ -236,17 +344,12 @@ with tab_upload:
         "or drop folders straight into `apps/` on GitHub."
     )
 
-# --- Tab 2: add URL app ---
 with tab_url:
     c1, c2 = st.columns([2, 3])
     with c1:
         url_title = st.text_input("App name", placeholder="My Live Demo", key="url_title")
     with c2:
-        url_value = st.text_input(
-            "URL",
-            placeholder="https://example.com",
-            key="url_value",
-        )
+        url_value = st.text_input("URL", placeholder="https://example.com", key="url_value")
 
     url_desc = st.text_input(
         "Short description (optional)",
