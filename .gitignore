@@ -5,3 +5,4 @@ venv/
 .DS_Store
 .streamlit/secrets.toml
 url_apps.json
+profile/
