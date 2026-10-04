@@ -1,0 +1,42 @@
+
+---
+
+## About the `YOUR NAME HERE` placeholder
+
+You haven't told me your actual name yet, so I can't fill it in for you. There are **three places** across two files where it appears:
+
+| File | What to change |
+|---|---|
+| `streamlit_app.py` | Line 3 (docstring) and line 12 (`YOUR_NAME = ...`) |
+| `README.md` | The "Built by:" line |
+
+**Option 1 — Tell me your name** and I'll rewrite both files with it already filled in. Just reply with your name.
+
+**Option 2 — Do it yourself** in VS Code:
+
+1. Open `streamlit_app.py`
+2. Press `Ctrl + H` (find and replace)
+3. Find: `YOUR NAME HERE`
+4. Replace: `Your Actual Name`
+5. Click **Replace All**
+6. Do the same in `README.md`
+
+The final `streamlit_app.py` header should look like this after the change:
+
+```python
+"""
+Nest — a Streamlit launcher for my HTML applications.
+Built by: Jane Doe
+"""
+
+import re
+import shutil
+from pathlib import Path
+
+import streamlit as st
+
+# =================== CONFIG ===================
+YOUR_NAME = "Jane Doe"
+APP_NAME  = "Nest"
+APPS_DIR  = Path("apps")
+# ==============================================
