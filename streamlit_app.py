@@ -4,6 +4,7 @@ Built by: Gesner Deslandes — Software Engineer
 Contact: (509)-47385663 · deslandes78@gmail.com
 """
 
+import json
 import re
 import shutil
 from pathlib import Path
@@ -17,6 +18,7 @@ YOUR_PHONE   = "(509)-47385663"
 YOUR_EMAIL   = "deslandes78@gmail.com"
 APP_NAME     = "NEST — MY HTML HUB"
 APPS_DIR     = Path("apps")
+URLS_FILE    = Path("url_apps.json")
 # ==============================================
 
 APPS_DIR.mkdir(exist_ok=True)
@@ -32,17 +34,12 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-      /* Page background — soft light blue */
       .stApp {
         background: linear-gradient(180deg, #e0f2fe 0%, #f0f9ff 100%);
       }
-
-      /* Sidebar (if used) */
       section[data-testid="stSidebar"] {
         background-color: #bae6fd;
       }
-
-      /* Buttons — light blue */
       .stButton > button {
         background-color: #0284c7 !important;
         color: #ffffff !important;
@@ -54,23 +51,17 @@ st.markdown(
       .stButton > button:hover {
         background-color: #0369a1 !important;
       }
-
-      /* Cards (st.container border=True) */
       div[data-testid="stVerticalBlockBorderWrapper"] {
         background-color: #f0f9ff;
         border: 1px solid #7dd3fc !important;
         border-radius: 14px !important;
         box-shadow: 0 4px 14px rgba(2, 132, 199, 0.08);
       }
-
-      /* Expander */
       details {
         background-color: #f0f9ff;
         border: 1px solid #7dd3fc !important;
         border-radius: 12px !important;
       }
-
-      /* Inputs */
       input, textarea {
         background-color: #ffffff !important;
         border: 1px solid #7dd3fc !important;
@@ -80,16 +71,15 @@ st.markdown(
         border-color: #0284c7 !important;
         box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.18) !important;
       }
+      hr { border-color: #bae6fd !important; }
+      h2, h3 { color: #0c4a6e; }
 
-      /* Dividers */
-      hr {
-        border-color: #bae6fd !important;
+      .badge {
+        display:inline-block; padding:2px 10px; border-radius:999px;
+        font-size:0.72rem; font-weight:700; letter-spacing:0.05em;
       }
-
-      /* Headings inside content */
-      h2, h3 {
-        color: #0c4a6e;
-      }
+      .badge-file { background:#bae6fd; color:#075985; }
+      .badge-url  { background:#c7d2fe; color:#3730a3; }
     </style>
     """,
     unsafe_allow_html=True,
@@ -97,7 +87,30 @@ st.markdown(
 
 
 # ---------------- Helpers ----------------
-def list_apps():
+def safe_name(raw: str) -> str:
+    cleaned = re.sub(r"[^A-Za-z0-9_\- ]", "", raw).strip()
+    return cleaned.replace(" ", "-") or "app"
+
+
+def load_url_apps():
+    if URLS_FILE.exists():
+        try:
+            data = json.loads(URLS_FILE.read_text())
+            if isinstance(data, list):
+                return data
+        except Exception:
+            pass
+    return []
+
+
+def save_url_apps(items):
+    try:
+        URLS_FILE.write_text(json.dumps(items, indent=2))
+    except Exception as e:
+        st.warning(f"Could not save URL list: {e}")
+
+
+def list_local_apps():
     apps = []
     for entry in sorted(APPS_DIR.iterdir(), key=lambda p: p.name.lower()):
         if entry.name.startswith("."):
@@ -113,7 +126,7 @@ def list_apps():
                 "title": entry.name.replace("-", " ").replace("_", " ").title(),
                 "path": index,
                 "key": entry.name,
-                "kind": "folder",
+                "kind": "file",
             })
         elif entry.suffix.lower() == ".html":
             apps.append({
@@ -125,9 +138,20 @@ def list_apps():
     return apps
 
 
-def safe_name(raw: str) -> str:
-    cleaned = re.sub(r"[^A-Za-z0-9_\- ]", "", raw).strip()
-    return cleaned.replace(" ", "-") or "app"
+def list_url_apps():
+    return [
+        {
+            "title": u.get("title", "Untitled"),
+            "url":   u.get("url", ""),
+            "key":   u.get("key", safe_name(u.get("title", "url-app"))),
+            "kind":  "url",
+        }
+        for u in load_url_apps()
+    ]
+
+
+def list_all_apps():
+    return list_local_apps() + list_url_apps()
 
 
 # ---------------- Session state ----------------
@@ -172,22 +196,26 @@ st.markdown(
 st.divider()
 
 
-# ---------------- Upload panel ----------------
-with st.expander("➕  Add a new app", expanded=False):
+# ---------------- Add panels ----------------
+tab_upload, tab_url = st.tabs(["➕  Upload HTML app", "🔗  Add URL app (demo)"])
+
+# --- Tab 1: upload HTML ---
+with tab_upload:
     col1, col2, col3 = st.columns([2, 3, 1])
     with col1:
-        app_name = st.text_input("App name (optional)", placeholder="My App")
+        app_name = st.text_input("App name (optional)", placeholder="My App", key="upload_name")
     with col2:
         uploaded = st.file_uploader(
             "Upload HTML + assets",
             type=["html", "css", "js", "png", "jpg", "jpeg",
                   "svg", "gif", "webp", "json", "txt", "ico"],
             accept_multiple_files=True,
+            key="upload_files",
         )
     with col3:
         st.write("")
         st.write("")
-        add_clicked = st.button("Upload", use_container_width=True)
+        add_clicked = st.button("Upload", use_container_width=True, key="upload_btn")
 
     if add_clicked:
         if not uploaded:
@@ -204,58 +232,144 @@ with st.expander("➕  Add a new app", expanded=False):
             st.rerun()
 
     st.caption(
-        "Tip: upload `index.html` plus its CSS/JS/images together. "
-        "You can also drop folders straight into `apps/` on GitHub."
+        "Upload `index.html` plus its CSS/JS/images together, "
+        "or drop folders straight into `apps/` on GitHub."
+    )
+
+# --- Tab 2: add URL app ---
+with tab_url:
+    c1, c2 = st.columns([2, 3])
+    with c1:
+        url_title = st.text_input("App name", placeholder="My Live Demo", key="url_title")
+    with c2:
+        url_value = st.text_input(
+            "URL",
+            placeholder="https://example.com",
+            key="url_value",
+        )
+
+    url_desc = st.text_input(
+        "Short description (optional)",
+        placeholder="What this demo does…",
+        key="url_desc",
+    )
+
+    b1, b2 = st.columns([1, 5])
+    with b1:
+        add_url_clicked = st.button("Add URL", use_container_width=True, key="url_btn")
+
+    if add_url_clicked:
+        if not url_title.strip() or not url_value.strip():
+            st.warning("Both name and URL are required.")
+        elif not re.match(r"^https?://", url_value.strip()):
+            st.warning("URL must start with http:// or https://")
+        else:
+            items = load_url_apps()
+            items.append({
+                "title": url_title.strip(),
+                "url":   url_value.strip(),
+                "desc":  url_desc.strip(),
+                "key":   safe_name(url_title.strip()),
+            })
+            save_url_apps(items)
+            st.success(f"Added **{url_title}** — refresh to see it below.")
+            st.rerun()
+
+    st.caption(
+        "⚠️ Some sites (Google, YouTube, Facebook) block embedding. "
+        "Your own GitHub Pages / Netlify / Vercel demo links usually work."
     )
 
 
 # ---------------- App grid ----------------
-apps = list_apps()
+apps = list_all_apps()
 
 if st.session_state.active_app:
     selected = next((a for a in apps if a["key"] == st.session_state.active_app), None)
     if selected:
-        back_col, title_col = st.columns([1, 5])
+        back_col, title_col, open_col = st.columns([1, 4, 1])
         with back_col:
             if st.button("← Back", use_container_width=True):
                 st.session_state.active_app = None
                 st.rerun()
         with title_col:
             st.subheader(selected["title"])
+        with open_col:
+            if selected["kind"] == "url":
+                st.link_button("Open ↗", selected["url"], use_container_width=True)
+
         try:
-            st.iframe(selected["path"], height=900)
+            if selected["kind"] == "url":
+                st.iframe(selected["url"], height=900)
+            else:
+                st.iframe(selected["path"], height=900)
         except Exception as e:
             st.error(f"Could not load app: {e}")
+            if selected["kind"] == "url":
+                st.markdown(f"[Open in a new tab ↗]({selected['url']})")
     else:
         st.session_state.active_app = None
         st.rerun()
+
 else:
     if not apps:
-        st.info("No apps yet. Upload an HTML file above, or push a folder into `apps/` on GitHub.")
+        st.info(
+            "No apps yet. Upload an HTML file, add a URL, "
+            "or push a folder into `apps/` on GitHub."
+        )
     else:
         st.subheader(f"Your apps ({len(apps)})")
         cols_per_row = 3
         for i in range(0, len(apps), cols_per_row):
             row = apps[i : i + cols_per_row]
             cols = st.columns(cols_per_row)
+
             for col, a in zip(cols, row):
                 with col:
                     with st.container(border=True):
                         st.markdown(f"### 🧩 {a['title']}")
-                        st.caption(f"{a['kind']} · `{a['key']}`")
+
+                        if a["kind"] == "url":
+                            st.markdown(
+                                '<span class="badge badge-url">URL · DEMO</span>',
+                                unsafe_allow_html=True,
+                            )
+                            st.caption(a.get("url", ""))
+                        else:
+                            st.markdown(
+                                '<span class="badge badge-file">LOCAL HTML</span>',
+                                unsafe_allow_html=True,
+                            )
+                            st.caption(f"`{a['key']}`")
+
                         btn1, btn2 = st.columns([3, 1])
                         with btn1:
-                            if st.button("Open", key=f"open_{a['key']}", use_container_width=True):
+                            if st.button(
+                                "Open",
+                                key=f"open_{a['kind']}_{a['key']}",
+                                use_container_width=True,
+                            ):
                                 st.session_state.active_app = a["key"]
                                 st.rerun()
                         with btn2:
-                            if st.button("🗑", key=f"del_{a['key']}", use_container_width=True):
-                                target = APPS_DIR / a["key"]
-                                if target.exists():
-                                    if target.is_dir():
-                                        shutil.rmtree(target)
-                                    else:
-                                        target.unlink()
+                            if st.button(
+                                "🗑",
+                                key=f"del_{a['kind']}_{a['key']}",
+                                use_container_width=True,
+                            ):
+                                if a["kind"] == "url":
+                                    items = [
+                                        u for u in load_url_apps()
+                                        if safe_name(u.get("title", "")) != a["key"]
+                                    ]
+                                    save_url_apps(items)
+                                else:
+                                    target = APPS_DIR / a["key"]
+                                    if target.exists():
+                                        if target.is_dir():
+                                            shutil.rmtree(target)
+                                        else:
+                                            target.unlink()
                                 st.rerun()
 
 
