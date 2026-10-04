@@ -28,6 +28,74 @@ st.set_page_config(
 )
 
 
+# ---------------- Light blue global styling ----------------
+st.markdown(
+    """
+    <style>
+      /* Page background — soft light blue */
+      .stApp {
+        background: linear-gradient(180deg, #e0f2fe 0%, #f0f9ff 100%);
+      }
+
+      /* Sidebar (if used) */
+      section[data-testid="stSidebar"] {
+        background-color: #bae6fd;
+      }
+
+      /* Buttons — light blue */
+      .stButton > button {
+        background-color: #0284c7 !important;
+        color: #ffffff !important;
+        border: 0 !important;
+        border-radius: 10px !important;
+        font-weight: 600 !important;
+        transition: background 0.15s ease !important;
+      }
+      .stButton > button:hover {
+        background-color: #0369a1 !important;
+      }
+
+      /* Cards (st.container border=True) */
+      div[data-testid="stVerticalBlockBorderWrapper"] {
+        background-color: #f0f9ff;
+        border: 1px solid #7dd3fc !important;
+        border-radius: 14px !important;
+        box-shadow: 0 4px 14px rgba(2, 132, 199, 0.08);
+      }
+
+      /* Expander */
+      details {
+        background-color: #f0f9ff;
+        border: 1px solid #7dd3fc !important;
+        border-radius: 12px !important;
+      }
+
+      /* Inputs */
+      input, textarea {
+        background-color: #ffffff !important;
+        border: 1px solid #7dd3fc !important;
+        border-radius: 10px !important;
+      }
+      input:focus, textarea:focus {
+        border-color: #0284c7 !important;
+        box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.18) !important;
+      }
+
+      /* Dividers */
+      hr {
+        border-color: #bae6fd !important;
+      }
+
+      /* Headings inside content */
+      h2, h3 {
+        color: #0c4a6e;
+      }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
+
 # ---------------- Helpers ----------------
 def list_apps():
     apps = []
@@ -70,24 +138,31 @@ if "active_app" not in st.session_state:
 # ---------------- Header ----------------
 st.markdown(
     f"""
-    <div style="text-align:center; padding: 28px 0 12px;">
+    <div style="
+        text-align:center; padding: 32px 24px 22px;
+        background: linear-gradient(135deg, #bae6fd 0%, #e0f2fe 100%);
+        border: 1px solid #7dd3fc;
+        border-radius: 18px;
+        box-shadow: 0 8px 24px rgba(2, 132, 199, 0.12);
+        margin-bottom: 8px;
+    ">
         <h1 style="
             margin:0; font-size:2.9rem; font-weight:800; letter-spacing:-0.02em;
-            background: linear-gradient(90deg,#2563eb,#7c3aed);
+            background: linear-gradient(90deg,#0369a1,#0284c7);
             -webkit-background-clip: text; background-clip: text;
             color: transparent;
         ">{YOUR_NAME}</h1>
         <p style="
             margin:8px 0 0; font-size:1rem; font-weight:600;
-            letter-spacing:0.14em; color:#475569; text-transform:uppercase;
+            letter-spacing:0.14em; color:#075985; text-transform:uppercase;
         ">{YOUR_TITLE}</p>
-        <p style="margin:10px 0 0; font-size:0.95rem; color:#64748b;">
+        <p style="margin:10px 0 0; font-size:0.95rem; color:#0c4a6e;">
             📞 {YOUR_PHONE} &nbsp;·&nbsp; ✉️
-            <a href="mailto:{YOUR_EMAIL}" style="color:#2563eb; text-decoration:none;">{YOUR_EMAIL}</a>
+            <a href="mailto:{YOUR_EMAIL}" style="color:#0284c7; text-decoration:none;">{YOUR_EMAIL}</a>
         </p>
         <p style="
             margin:18px 0 0; font-size:1.15rem; font-weight:700;
-            letter-spacing:0.08em; color:#0f172a;
+            letter-spacing:0.08em; color:#0c4a6e;
         ">{APP_NAME}</p>
     </div>
     """,
@@ -188,10 +263,17 @@ else:
 st.divider()
 st.markdown(
     f"""
-    <div style="text-align:center; padding: 16px 0 8px; color:#94a3b8; font-size:0.85rem;">
-        © {YOUR_NAME} — {YOUR_TITLE}<br>
+    <div style="
+        text-align:center; padding: 18px;
+        background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+        border: 1px solid #7dd3fc;
+        border-radius: 14px;
+        color:#0c4a6e; font-size:0.88rem;
+        margin-top: 8px;
+    ">
+        <strong>{YOUR_NAME}</strong> — {YOUR_TITLE}<br>
         📞 {YOUR_PHONE} &nbsp;·&nbsp;
-        ✉️ <a href="mailto:{YOUR_EMAIL}" style="color:#2563eb; text-decoration:none;">{YOUR_EMAIL}</a>
+        ✉️ <a href="mailto:{YOUR_EMAIL}" style="color:#0284c7; text-decoration:none;">{YOUR_EMAIL}</a>
     </div>
     """,
     unsafe_allow_html=True,
