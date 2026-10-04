@@ -1,9 +1,17 @@
-# 🪺 Nest — My HTML App Hub
+# 🪺 NEST — MY HTML HUB
 
 A Streamlit launcher that hosts all my HTML applications in one place,
 accessible from any browser, on any device.
 
-**Built by:** YOUR NAME HERE
+---
+
+## Built by
+
+**GESNER DESLANDES**
+SOFTWARE ENGINEER
+
+- 📞 (509)-47385663
+- ✉️ deslandes78@gmail.com
 
 ---
 
