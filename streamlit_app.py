@@ -1,6 +1,7 @@
 """
-Nest — a Streamlit launcher for my HTML applications.
-Built by: YOUR NAME HERE
+Nest — My HTML App Hub
+Built by: Gesner Deslandes — Software Engineer
+Contact: (509)-47385663 · deslandes78@gmail.com
 """
 
 import re
@@ -10,9 +11,12 @@ from pathlib import Path
 import streamlit as st
 
 # =================== CONFIG ===================
-YOUR_NAME = "YOUR NAME HERE"
-APP_NAME  = "Nest"
-APPS_DIR  = Path("apps")
+YOUR_NAME    = "GESNER DESLANDES"
+YOUR_TITLE   = "SOFTWARE ENGINEER"
+YOUR_PHONE   = "(509)-47385663"
+YOUR_EMAIL   = "deslandes78@gmail.com"
+APP_NAME     = "NEST — MY HTML HUB"
+APPS_DIR     = Path("apps")
 # ==============================================
 
 APPS_DIR.mkdir(exist_ok=True)
@@ -24,6 +28,7 @@ st.set_page_config(
 )
 
 
+# ---------------- Helpers ----------------
 def list_apps():
     apps = []
     for entry in sorted(APPS_DIR.iterdir(), key=lambda p: p.name.lower()):
@@ -57,22 +62,33 @@ def safe_name(raw: str) -> str:
     return cleaned.replace(" ", "-") or "app"
 
 
+# ---------------- Session state ----------------
 if "active_app" not in st.session_state:
     st.session_state.active_app = None
 
 
+# ---------------- Header ----------------
 st.markdown(
     f"""
-    <div style="text-align:center; padding: 24px 0 8px;">
+    <div style="text-align:center; padding: 28px 0 12px;">
         <h1 style="
-            margin:0; font-size:2.8rem; letter-spacing:-0.02em;
+            margin:0; font-size:2.9rem; font-weight:800; letter-spacing:-0.02em;
             background: linear-gradient(90deg,#2563eb,#7c3aed);
             -webkit-background-clip: text; background-clip: text;
             color: transparent;
         ">{YOUR_NAME}</h1>
-        <p style="color:#64748b; margin:6px 0 0; font-size:1.1rem;">
-            {APP_NAME} — My HTML App Hub
+        <p style="
+            margin:8px 0 0; font-size:1rem; font-weight:600;
+            letter-spacing:0.14em; color:#475569; text-transform:uppercase;
+        ">{YOUR_TITLE}</p>
+        <p style="margin:10px 0 0; font-size:0.95rem; color:#64748b;">
+            📞 {YOUR_PHONE} &nbsp;·&nbsp; ✉️
+            <a href="mailto:{YOUR_EMAIL}" style="color:#2563eb; text-decoration:none;">{YOUR_EMAIL}</a>
         </p>
+        <p style="
+            margin:18px 0 0; font-size:1.15rem; font-weight:700;
+            letter-spacing:0.08em; color:#0f172a;
+        ">{APP_NAME}</p>
     </div>
     """,
     unsafe_allow_html=True,
@@ -81,6 +97,7 @@ st.markdown(
 st.divider()
 
 
+# ---------------- Upload panel ----------------
 with st.expander("➕  Add a new app", expanded=False):
     col1, col2, col3 = st.columns([2, 3, 1])
     with col1:
@@ -117,6 +134,7 @@ with st.expander("➕  Add a new app", expanded=False):
     )
 
 
+# ---------------- App grid ----------------
 apps = list_apps()
 
 if st.session_state.active_app:
@@ -164,3 +182,17 @@ else:
                                     else:
                                         target.unlink()
                                 st.rerun()
+
+
+# ---------------- Footer ----------------
+st.divider()
+st.markdown(
+    f"""
+    <div style="text-align:center; padding: 16px 0 8px; color:#94a3b8; font-size:0.85rem;">
+        © {YOUR_NAME} — {YOUR_TITLE}<br>
+        📞 {YOUR_PHONE} &nbsp;·&nbsp;
+        ✉️ <a href="mailto:{YOUR_EMAIL}" style="color:#2563eb; text-decoration:none;">{YOUR_EMAIL}</a>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
